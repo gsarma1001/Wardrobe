@@ -19,7 +19,7 @@
   input, textarea, select, button { font: inherit; border-radius: .55rem; }
   input, textarea, select { width: 100%; padding: .55rem; border: 1px solid #8e819f; background: white; color: inherit; }
   input[type=file] { padding: .4rem; }
-  button { cursor: pointer; padding: .55rem .85rem; border: 1px solid #56369e; background: #56369e; color: white; }
+  button { cursor: pointer; padding: .55rem .85rem; border: 1px solid #56369e; background: #56369e; color: white; min-height: 2.75rem; }
   button.secondary { background: transparent; color: inherit; border-color: currentColor; }
   :focus-visible { outline: 3px solid #a270f3; outline-offset: 3px; }
   .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr)); gap: .65rem; margin: 0 0 1rem; padding: 0; list-style: none; }
@@ -29,7 +29,20 @@
   article + article { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #dcd0ee; }
   #status { margin-top: .75rem; }
   a { color: #503094; }
-  @media (max-width: 44rem) { .panels { grid-template-columns: 1fr; } }
+  .event-prompts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 7rem), 1fr)); gap: .5rem; margin: .75rem 0; }
+  .event-prompts button { padding: .4rem .6rem; font-size: .9rem; white-space: normal; height: auto; min-height: 2.5rem; }
+  .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
+  .modal.active { display: flex; }
+  .modal-content { background: white; padding: 1.5rem; border-radius: 1rem; max-width: 90vw; max-height: 90vh; overflow: auto; position: relative; }
+  .modal-close { position: absolute; top: 1rem; right: 1rem; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #56369e; }
+  .crop-container { position: relative; width: 100%; margin: 1rem 0; }
+  .crop-canvas { width: 100%; max-height: 60vh; border: 2px dashed #8e819f; border-radius: .5rem; display: block; }
+  .crop-controls { display: grid; grid-template-columns: auto auto auto; gap: .5rem; margin: 1rem 0; }
+  .crop-controls button { padding: .4rem .6rem; font-size: .85rem; }
+  @media (max-width: 44rem) { 
+    .panels { grid-template-columns: 1fr; }
+    .event-prompts { grid-template-columns: repeat(auto-fit, minmax(min(100%, 6rem), 1fr)); }
+  }
 </style>
 </head>
 <body>
@@ -48,6 +61,7 @@
         <label>Category <select name="category"><option>Top</option><option>Bottom</option><option>Dress or jumpsuit</option><option>Layer</option><option>Shoes</option><option>Accessory</option></select></label>
         <label>How dressy is it? <select name="style"><option>Casual</option><option>Dressy casual</option><option>Formal</option></select></label>
         <label>Clothing photo (optional) <input id="photo" type="file" accept="image/png,image/jpeg,image/webp,image/gif"></label>
+        <p style="font-size: 0.85rem; color: #666; margin: 0.5rem 0 0;">Tip: Use the preview to crop out faces, room details, or labels before adding.</p>
         <img id="preview" alt="Selected clothing photo" hidden style="display:none">
         <button>Add item</button>
       </form>
@@ -58,7 +72,16 @@
     <section>
       <h2>Plan an outfit</h2>
       <form id="event" autocomplete="off">
-        <label>What’s the event? <textarea name="occasion" rows="3" placeholder="Senior sunrise on the football field. It’ll be cold." required maxlength="300"></textarea></label>
+        <label>What's the event? <textarea name="occasion" rows="3" placeholder="Senior sunrise on the football field. It'll be cold." required maxlength="300"></textarea></label>
+        <div class="event-prompts" role="group" aria-label="Event type suggestions">
+          <button type="button" class="event-prompt secondary" data-event="Prom night - formal attire">Prom</button>
+          <button type="button" class="event-prompt secondary" data-event="Homecoming dance - dressy casual">Homecoming</button>
+          <button type="button" class="event-prompt secondary" data-event="Senior sunrise - casual outdoor">Senior Sunrise</button>
+          <button type="button" class="event-prompt secondary" data-event="Graduation party - dressy casual">Grad Party</button>
+          <button type="button" class="event-prompt secondary" data-event="Banquet - formal dinner">Banquet</button>
+          <button type="button" class="event-prompt secondary" data-event="Band performance - dressy casual">Performance</button>
+          <button type="button" class="event-prompt secondary" data-event="School social event">Social</button>
+        </div>
         <label>Dress code <select name="dressCode"><option>Use the event description</option><option>Casual</option><option>Dressy casual</option><option>Formal</option></select></label>
         <label>Shopping budget in USD (optional) <input name="budget" type="number" min="1" max="500" step="1" placeholder="20"></label>
         <button>Find outfits</button>
@@ -72,6 +95,23 @@
     <p id="shopping" hidden></p>
   </section>
 </main>
+
+<div id="cropModal" class="modal">
+  <div class="modal-content">
+    <button class="modal-close" aria-label="Close crop preview">&times;</button>
+    <h3>Preview your photo</h3>
+    <p style="font-size: 0.9rem; color: #666;">You can rotate the image to remove faces, room details, or labels. Only the visible area will be saved.</p>
+    <div class="crop-container">
+      <canvas id="cropCanvas" class="crop-canvas"></canvas>
+    </div>
+    <div class="crop-controls">
+      <button type="button" id="cropRotate" class="secondary">↻ Rotate</button>
+      <button type="button" id="cropReset" class="secondary">Reset</button>
+      <button type="button" id="cropConfirm">Confirm crop</button>
+    </div>
+  </div>
+</div>
+
 <script>
   const find = id => document.getElementById(id);
   const closet = find('closet');
@@ -81,6 +121,7 @@
   const items = [];
   const styles = ['Casual', 'Dressy casual', 'Formal'];
   let selectedPhoto = '';
+  let cropState = { rotation: 0, originalUrl: '', canvas: null, context: null, image: null };
 
   function element(tag, content) {
     const node = document.createElement(tag);
@@ -96,9 +137,82 @@
     else preview.removeAttribute('src');
   }
 
+  function openCropModal(imageUrl) {
+    const modal = find('cropModal');
+    const canvas = find('cropCanvas');
+    cropState.originalUrl = imageUrl;
+    cropState.rotation = 0;
+    cropState.canvas = canvas;
+    cropState.context = canvas.getContext('2d');
+    
+    const img = new Image();
+    img.onload = () => {
+      cropState.image = img;
+      drawCrop();
+      modal.classList.add('active');
+    };
+    img.src = imageUrl;
+  }
+
+  function drawCrop() {
+    const { canvas, context, image, rotation } = cropState;
+    const size = Math.max(image.width, image.height);
+    canvas.width = size;
+    canvas.height = size;
+    
+    context.save();
+    context.translate(size / 2, size / 2);
+    context.rotate((rotation * Math.PI) / 180);
+    context.drawImage(image, -image.width / 2, -image.height / 2);
+    context.restore();
+  }
+
+  find('cropRotate').addEventListener('click', (e) => {
+    e.preventDefault();
+    cropState.rotation = (cropState.rotation + 90) % 360;
+    drawCrop();
+  });
+
+  find('cropReset').addEventListener('click', (e) => {
+    e.preventDefault();
+    cropState.rotation = 0;
+    drawCrop();
+  });
+
+  find('cropConfirm').addEventListener('click', (e) => {
+    e.preventDefault();
+    const { canvas } = cropState;
+    const croppedUrl = canvas.toDataURL('image/jpeg', 0.9);
+    showPreview(croppedUrl);
+    find('cropModal').classList.remove('active');
+  });
+
+  find('cropModal').querySelector('.modal-close').addEventListener('click', () => {
+    find('cropModal').classList.remove('active');
+  });
+
+  find('cropModal').addEventListener('click', (e) => {
+    if (e.target === find('cropModal')) {
+      find('cropModal').classList.remove('active');
+    }
+  });
+
   photo.addEventListener('change', () => {
-    if (selectedPhoto) URL.revokeObjectURL(selectedPhoto);
-    showPreview(photo.files[0] ? URL.createObjectURL(photo.files[0]) : '');
+    if (selectedPhoto && selectedPhoto.startsWith('blob:')) URL.revokeObjectURL(selectedPhoto);
+    if (photo.files[0]) {
+      const url = URL.createObjectURL(photo.files[0]);
+      openCropModal(url);
+    } else {
+      showPreview('');
+    }
+  });
+
+  document.querySelectorAll('.event-prompt').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      eventForm.elements.occasion.value = btn.dataset.event;
+      eventForm.elements.occasion.focus();
+    });
   });
 
   function tile(item) {
@@ -130,7 +244,7 @@
       remove.addEventListener('click', () => {
         items.splice(items.indexOf(item), 1);
         clearResults();
-        if (item.photo) URL.revokeObjectURL(item.photo);
+        if (item.photo && item.photo.startsWith('blob:')) URL.revokeObjectURL(item.photo);
         renderCloset();
         closet.elements.itemName.focus();
         find('status').textContent = item.name + ' removed.';
@@ -150,6 +264,7 @@
     }
     items.push({name, category: data.get('category'), style: styles.indexOf(data.get('style')), photo: selectedPhoto});
     showPreview('');
+    photo.value = '';
     closet.reset();
     clearResults();
     renderCloset();
@@ -208,8 +323,11 @@
       list.append(...outfit.pieces.map(tile));
       const fit = styles[ideas.target].toLowerCase();
       const details = [outfit.exact ? 'Your main pieces match the ' + fit + ' dress code.' : 'These are among your closest matches for a ' + fit + ' outfit.'];
-      if (ideas.wantsLayers) details.push(ideas.layer ? 'The extra layer helps in cooler weather.' : 'Check whether you have a layer for cooler weather.');
-      if (!ideas.shoe) details.push(ideas.wantsSneakers ? 'Add sneakers to complete this look.' : 'Choose shoes to complete this look.');
+      if (ideas.wantsLayers && ideas.layer) details.push('The extra layer helps in cooler weather.');
+      if (ideas.wantsLayers && !ideas.layer) details.push('Check whether you have a layer for cooler weather.');
+      if (!ideas.shoe) {
+        details.push(ideas.wantsSneakers ? 'Add sneakers to complete this look.' : 'Choose shoes to complete this look.');
+      }
       card.append(element('h3', 'Outfit ' + (index + 1)), list, element('p', details.join(' ')));
       find('outfits').append(card);
     });
@@ -220,7 +338,7 @@
       link.href = 'https://www.google.com/search?tbm=shop&q=' + encodeURIComponent(accessory + ' under $' + budget);
       link.target = '_blank';
       link.rel = 'noopener noreferrer';
-      find('shopping').replaceChildren(link, document.createTextNode('. Check prices and availability on the retailer’s site.'));
+      find('shopping').replaceChildren(link, document.createTextNode('. Check prices and availability on the retailer\'s site.'));
       find('shopping').hidden = false;
     }
     find('results').hidden = false;
@@ -230,11 +348,12 @@
   });
 
   function endSession() {
-    for (const item of items) if (item.photo) URL.revokeObjectURL(item.photo);
-    if (selectedPhoto) URL.revokeObjectURL(selectedPhoto);
+    for (const item of items) if (item.photo && item.photo.startsWith('blob:')) URL.revokeObjectURL(item.photo);
+    if (selectedPhoto && selectedPhoto.startsWith('blob:')) URL.revokeObjectURL(selectedPhoto);
     items.length = 0;
     closet.reset();
     eventForm.reset();
+    photo.value = '';
     showPreview('');
     clearResults();
     renderCloset();
