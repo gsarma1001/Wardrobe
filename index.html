@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src blob:; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
+<title>Closet Plan</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 1rem/1.55 system-ui, sans-serif; color: #1d172b; background: #f5f0ff; }
+  main { max-width: 70rem; margin: auto; padding: clamp(1rem, 4vw, 3rem); }
+  header { background: #23163c; color: white; padding: clamp(1.5rem, 5vw, 3.5rem); border-radius: 1.5rem; }
+  h1 { font: 700 clamp(2.5rem, 8vw, 5rem)/.98 Georgia, serif; margin: .45em 0 .3em; }
+  h2, h3, p { margin: 0 0 .7rem; }
+  .panels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin-block: 1rem; }
+  section { background: white; padding: clamp(1rem, 3vw, 1.65rem); border: 1px solid #dcd0ee; border-radius: 1.25rem; }
+  label { display: block; font-weight: 650; margin-block: .65rem; }
+  input, textarea, select, button { font: inherit; border-radius: .55rem; }
+  input, textarea, select { width: 100%; padding: .55rem; border: 1px solid #8e819f; background: white; color: inherit; }
+  input[type=file] { padding: .4rem; }
+  button { cursor: pointer; padding: .55rem .85rem; border: 1px solid #56369e; background: #56369e; color: white; }
+  button.secondary { background: transparent; color: inherit; border-color: currentColor; }
+  :focus-visible { outline: 3px solid #a270f3; outline-offset: 3px; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr)); gap: .65rem; margin: 0 0 1rem; padding: 0; list-style: none; }
+  .tiles li { background: #f0e8ff; padding: .65rem; border-radius: .7rem; overflow-wrap: anywhere; }
+  .tiles img, #preview { width: 100%; height: 8rem; display: block; object-fit: contain; background: #fff; border-radius: .5rem; }
+  .tiles button { margin-top: .5rem; }
+  article + article { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #dcd0ee; }
+  #status { margin-top: .75rem; }
+  a { color: #503094; }
+  @media (max-width: 44rem) { .panels { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <button id="clear" type="button" class="secondary">End session</button>
+    <h1>Closet Plan</h1>
+    <p>Find an outfit for your next event using the clothes you already own.</p>
+    <p>Your photos and answers stay in this tab. Ending the session clears them.</p>
+  </header>
+  <div class="panels">
+    <section>
+      <h2>Add your clothes</h2>
+      <form id="closet" autocomplete="off">
+        <label>Item name <input name="itemName" placeholder="Black trousers" required maxlength="80"></label>
+        <label>Category <select name="category"><option>Top</option><option>Bottom</option><option>Dress or jumpsuit</option><option>Layer</option><option>Shoes</option><option>Accessory</option></select></label>
+        <label>How dressy is it? <select name="style"><option>Casual</option><option>Dressy casual</option><option>Formal</option></select></label>
+        <label>Clothing photo (optional) <input id="photo" type="file" accept="image/png,image/jpeg,image/webp,image/gif"></label>
+        <img id="preview" alt="Selected clothing photo" hidden style="display:none">
+        <button>Add item</button>
+      </form>
+      <h3 style="margin-top:1rem">In this session</h3>
+      <ul id="items" class="tiles"></ul>
+      <p id="empty">Add a dress or a top and bottom to get started.</p>
+    </section>
+    <section>
+      <h2>Plan an outfit</h2>
+      <form id="event" autocomplete="off">
+        <label>What’s the event? <textarea name="occasion" rows="3" placeholder="Senior sunrise on the football field. It’ll be cold." required maxlength="300"></textarea></label>
+        <label>Dress code <select name="dressCode"><option>Use the event description</option><option>Casual</option><option>Dressy casual</option><option>Formal</option></select></label>
+        <label>Shopping budget in USD (optional) <input name="budget" type="number" min="1" max="500" step="1" placeholder="20"></label>
+        <button>Find outfits</button>
+      </form>
+      <p id="status" role="status"></p>
+    </section>
+  </div>
+  <section id="results" hidden aria-labelledby="results-title">
+    <h2 id="results-title">Outfit ideas</h2>
+    <div id="outfits"></div>
+    <p id="shopping" hidden></p>
+  </section>
+</main>
+<script>
+  const find = id => document.getElementById(id);
+  const closet = find('closet');
+  const eventForm = find('event');
+  const photo = find('photo');
+  const preview = find('preview');
+  const items = [];
+  const styles = ['Casual', 'Dressy casual', 'Formal'];
+  let selectedPhoto = '';
+
+  function element(tag, content) {
+    const node = document.createElement(tag);
+    node.textContent = content;
+    return node;
+  }
+
+  function showPreview(url) {
+    selectedPhoto = url;
+    preview.style.display = url ? 'block' : 'none';
+    preview.hidden = !url;
+    if (url) preview.src = url;
+    else preview.removeAttribute('src');
+  }
+
+  photo.addEventListener('change', () => {
+    if (selectedPhoto) URL.revokeObjectURL(selectedPhoto);
+    showPreview(photo.files[0] ? URL.createObjectURL(photo.files[0]) : '');
+  });
+
+  function tile(item) {
+    const node = element('li', '');
+    if (item.photo) {
+      const image = document.createElement('img');
+      image.src = item.photo;
+      image.alt = '';
+      node.append(image);
+    }
+    node.append(element('strong', item.name));
+    return node;
+  }
+
+  function clearResults() {
+    find('results').hidden = true;
+    find('outfits').replaceChildren();
+    find('shopping').replaceChildren();
+    find('shopping').hidden = true;
+  }
+
+  function renderCloset() {
+    find('empty').hidden = items.length > 0;
+    find('items').replaceChildren(...items.map(item => {
+      const node = tile(item);
+      const remove = element('button', 'Remove');
+      remove.className = 'secondary';
+      remove.setAttribute('aria-label', 'Remove ' + item.name);
+      remove.addEventListener('click', () => {
+        items.splice(items.indexOf(item), 1);
+        clearResults();
+        if (item.photo) URL.revokeObjectURL(item.photo);
+        renderCloset();
+        closet.elements.itemName.focus();
+        find('status').textContent = item.name + ' removed.';
+      });
+      node.append(element('div', item.category), remove);
+      return node;
+    }));
+  }
+
+  closet.addEventListener('submit', event => {
+    event.preventDefault();
+    const data = new FormData(closet);
+    const name = data.get('itemName').trim();
+    if (!name) {
+      closet.elements.itemName.focus();
+      return;
+    }
+    items.push({name, category: data.get('category'), style: styles.indexOf(data.get('style')), photo: selectedPhoto});
+    showPreview('');
+    closet.reset();
+    clearResults();
+    renderCloset();
+    find('status').textContent = name + ' added.';
+    closet.elements.itemName.focus();
+  });
+
+  function outfitIdeas(description, dressCode) {
+    const target = dressCode !== -1 ? dressCode
+      : /\b(prom|formal|black tie)\b/i.test(description) ? 2
+      : /\b(banquet|homecoming|graduation|grad party|performance)\b/i.test(description) ? 1 : 0;
+    const wantsLayers = /\b(cold|chilly|layers|jacket)\b/i.test(description);
+    const wantsSneakers = /\b(sneakers|trainers)\b/i.test(description);
+    const noHeels = /\b(no|without|avoid)\s+heels\b/i.test(description);
+    const byCategory = category => items.filter(item => item.category === category);
+    const ranked = candidates => [...candidates].sort((a, b) => Math.abs(a.style - target) - Math.abs(b.style - target));
+    const shoes = byCategory('Shoes').filter(item => !noHeels || !/\b(heels?|pumps?|stilettos?|wedges?)\b/i.test(item.name));
+    const sneakers = shoes.filter(item => /\b(sneakers|trainers)\b/i.test(item.name));
+    const shoe = ranked(wantsSneakers ? sneakers : shoes)[0];
+    const layer = wantsLayers ? ranked(byCategory('Layer'))[0] : undefined;
+    const accessory = ranked(byCategory('Accessory'))[0];
+    const bases = byCategory('Dress or jumpsuit').map(item => [item]);
+    for (const top of byCategory('Top')) {
+      for (const bottom of byCategory('Bottom')) bases.push([top, bottom]);
+    }
+    const score = base => base.reduce((sum, item) => sum + Math.abs(item.style - target), 0) / base.length;
+    return {
+      target, wantsLayers, wantsSneakers, layer, shoe,
+      outfits: bases.sort((a, b) => score(a) - score(b)).slice(0, 3).map(base => ({
+        exact: score(base) === 0,
+        pieces: [...base, layer, shoe, accessory].filter(Boolean)
+      }))
+    };
+  }
+
+  eventForm.addEventListener('input', clearResults);
+  eventForm.addEventListener('submit', event => {
+    event.preventDefault();
+    clearResults();
+    const data = new FormData(eventForm);
+    const description = data.get('occasion').trim();
+    if (!description) {
+      find('status').textContent = 'Describe the event first.';
+      eventForm.elements.occasion.focus();
+      return;
+    }
+    const ideas = outfitIdeas(description, styles.indexOf(data.get('dressCode')));
+    if (!ideas.outfits.length) {
+      find('status').textContent = 'Add a dress, jumpsuit, or both a top and bottom to get outfit ideas.';
+      return;
+    }
+    ideas.outfits.forEach((outfit, index) => {
+      const card = document.createElement('article');
+      const list = document.createElement('ul');
+      list.className = 'tiles';
+      list.append(...outfit.pieces.map(tile));
+      const fit = styles[ideas.target].toLowerCase();
+      const details = [outfit.exact ? 'Your main pieces match the ' + fit + ' dress code.' : 'These are among your closest matches for a ' + fit + ' outfit.'];
+      if (ideas.wantsLayers) details.push(ideas.layer ? 'The extra layer helps in cooler weather.' : 'Check whether you have a layer for cooler weather.');
+      if (!ideas.shoe) details.push(ideas.wantsSneakers ? 'Add sneakers to complete this look.' : 'Choose shoes to complete this look.');
+      card.append(element('h3', 'Outfit ' + (index + 1)), list, element('p', details.join(' ')));
+      find('outfits').append(card);
+    });
+    const budget = Number(data.get('budget'));
+    if (budget > 0) {
+      const accessory = !ideas.shoe ? (ideas.wantsSneakers ? 'sneakers' : 'flat dress shoes') : 'simple outfit accessories';
+      const link = element('a', 'Search for ' + accessory + ' under $' + budget);
+      link.href = 'https://www.google.com/search?tbm=shop&q=' + encodeURIComponent(accessory + ' under $' + budget);
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      find('shopping').replaceChildren(link, document.createTextNode('. Check prices and availability on the retailer’s site.'));
+      find('shopping').hidden = false;
+    }
+    find('results').hidden = false;
+    find('status').textContent = ideas.outfits.length + (ideas.outfits.length === 1 ? ' outfit ready.' : ' outfits ready.');
+    find('results-title').tabIndex = -1;
+    find('results-title').focus();
+  });
+
+  function endSession() {
+    for (const item of items) if (item.photo) URL.revokeObjectURL(item.photo);
+    if (selectedPhoto) URL.revokeObjectURL(selectedPhoto);
+    items.length = 0;
+    closet.reset();
+    eventForm.reset();
+    showPreview('');
+    clearResults();
+    renderCloset();
+    find('status').textContent = 'Session cleared.';
+  }
+
+  find('clear').addEventListener('click', endSession);
+  window.addEventListener('pagehide', endSession);
+</script>
+</body>
+</html>
