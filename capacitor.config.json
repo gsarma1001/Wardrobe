@@ -1,0 +1,20 @@
+{
+  "appId": "com.closetplan.app",
+  "appName": "Closet Plan",
+  "webDir": "www",
+  "bundledWebRuntime": false,
+  "ios": {
+    "contentInset": "automatic"
+  },
+  "android": {
+    "usesCleartextTraffic": true
+  },
+  "plugins": {
+    "Camera": {
+      "permissions": [
+        "camera",
+        "photos"
+      ]
+    }
+  }
+}
