@@ -1,5 +1,7 @@
 # Closet Plan: Quick Start Guide
 
+> Historical guide for the old prototype. Use [README.md](./README.md) for current setup and privacy details.
+
 ## What You Have
 
 A **free, privacy-first web app** that helps high school and college students find outfits from their existing closet for specific events.

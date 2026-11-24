@@ -1,5 +1,7 @@
 # Closet Plan: Complete Project Blueprint
 
+> Historical document for the old prototype. See [README.md](./README.md) for current status and privacy details.
+
 **Status:** Ready for Phase 1-2 Launch  
 **Last Updated:** November 23, 2026  
 **Target Users:** High school & college students (14-22)  

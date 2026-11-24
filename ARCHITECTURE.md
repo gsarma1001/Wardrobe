@@ -1,5 +1,7 @@
 # Closet Plan: User Flows & Information Architecture
 
+> Historical document for the old prototype. See [README.md](./README.md) for the current flow and privacy model.
+
 ## User Flow Diagram (Phase 1)
 
 ```

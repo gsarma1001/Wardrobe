@@ -1,67 +1,36 @@
 # Closet Plan
 
-Closet Plan helps high school and college students decide what to wear to an event using clothes they already own. The first version is a free, session-only web prototype. Try it for prom, homecoming, a graduation party, a cross-country banquet, a band performance, or senior sunrise.
-
-## Use the prototype
-
-1. Add a dress or jumpsuit, or add a top and bottom. Enter an item name, category, and dressiness. Clothing photos are optional.
-2. Describe the event and any preferences. For example, “Senior sunrise on the football field. It'll be cold, and I want to wear sneakers.”
-3. Choose a dress code or let the prototype infer one from the description. Add a USD budget if you want a shopping search.
-4. Select **Find outfits** to see up to three combinations. Select **End session** to clear your items, photos, event details, and results.
-
-The prototype uses rules to rank combinations. It recognizes a limited set of event and preference keywords. Shopping links open a generic search with the item type and budget. Retailers determine actual prices and availability.
+Closet Plan is a **local web prototype**, not yet a published mobile app. Add pieces of one outfit, describe an occasion, and request an AI-estimated suitability score. An estimate of 80% or higher offers an accept-or-shop choice; below 80%, shopping is optional. Scores are subjective estimates, not measured user satisfaction or guarantees.
 
 ## Run locally
 
-Open `index.html` in a browser. The prototype uses HTML, CSS, and JavaScript and runs without a build step. To edit it with VS Code and Copilot, clone the Wardrobe repository and open the cloned folder.
+Install Node.js 20 or newer. In PowerShell, set your own server-side API keys (do not put them in the code or share them in chat):
 
-```sh
-git clone https://github.com/gsarma1001/Wardrobe.git
-cd Wardrobe
-code .
+```powershell
+cd C:\Users\gomat\Documents\Wardrobe
+$env:OPENAI_API_KEY = "your-key"
+$env:SERPAPI_API_KEY = "your-key"
+npm run dev
 ```
 
-## Publish with GitHub Pages
+Open `http://127.0.0.1:8000`. Set the environment variables again in a new terminal session. OpenAI is required for assessment; SerpApi is required only for shopping. Both services may charge for use. `OPENAI_MODEL` optionally selects an OpenAI vision model supporting structured outputs; the default is `gpt-4o-mini`. To run the automated tests, use `npm test`; tests use mock providers and do not verify live credentials.
 
-Commit `index.html` and this `README.md` to the repository root. In **Settings → Pages**, choose **Deploy from a branch**, select the branch that contains the files, choose **/(root)**, and save. Open the published address shown in Pages settings. GitHub Pages makes the demo publicly accessible. Commit only app source and assets, and use sample clothing photos for testing.
+## How it works
 
-[GitHub Pages setup](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site)
+1. Add up to eight pieces, one by one. Add a JPEG, PNG or WebP photo, a description, or both. Adjust the crop edges and check the preview before adding each photo.
+2. Describe the event and your preferences. Check the consent box before requesting an assessment.
+3. Review the estimated score and explanation. If the AI cannot judge, it asks for more information rather than inventing a score.
+4. Choose shopping if desired and enter a total budget. Each displayed option is **one** item added to or substituted into the existing outfit, with its listed price within budget and an AI-estimated resulting-outfit match of at least 80%. Confirm before opening a link.
+5. Select **End session** to clear the current session.
 
-## Session privacy
+Shopping searches use a generic category, not event text or photos. Only a limited sample of Google Shopping results is checked; no qualifying result does not mean no store has a match. Prices, sizes, stock, tax and shipping must be checked at the seller and can make the final cost exceed the budget. This prototype does not assemble multi-item purchases.
 
-- Clothing photo previews and user inputs live in memory for the current session. The app has no accounts, database, analytics, photo upload endpoint, or AI service.
-- The prototype has no personal photo field. Students can use typed item names without adding any photos.
-- **End session** clears the current session. A phone can keep the app running in the background, so use **End session** when finished.
-- A shopping provider receives the generic item type and budget when a shopper clicks its link. The link omits the student's photos, closet item names, and event description.
+## Privacy and deployment
 
-## Mobile roadmap
+The app keeps its session in memory and has no account, database, or browser storage. Cropping happens in the browser. After consent, cropped photos, descriptions and event text are sent through the local server to OpenAI; a shopping assessment sends the event, clothing descriptions and product titles to OpenAI again. The generic clothing category is sent to SerpApi. Clicking a confirmed shopping link opens a third-party site with its own privacy practices.
 
-### 1. Test the published web app on phones
+OpenAI's `store: false` setting does **not** eliminate all provider retention: [OpenAI data controls](https://developers.openai.com/api/docs/guides/your-data) describes abuse-monitoring retention and eligibility for zero data retention. The server does not intentionally log request bodies, but hosting infrastructure and providers may have their own logs. Review these policies and obtain any required parental consent and safeguards before serving minors; see [OpenAI under-18 guidance](https://developers.openai.com/api/docs/guides/safety-checks/under-18-api-guidance).
 
-Open the GitHub Pages URL on iPhone and Android. Add a sample photo and a few garments, generate an outfit, and check that **End session** clears the session. Repeat after launching from the home screen. Test longer item names and opening a shopping link.
+The included server binds only to localhost. It is for local development, not public deployment: production needs HTTPS, authentication or abuse controls, rate limits, privacy/legal review, and secure secret management. GitHub Pages alone cannot run the server or keep API keys private. A Capacitor mobile build would need a securely hosted API and device testing; it is not configured or tested by this change.
 
-On an iPhone, use Safari's **Add to Home Screen** command and enable **Open as Web App** if shown. On Android, use Chrome's **Add to home screen** menu. Depending on install support, Chrome may offer a shortcut or an app install.
-
-[Apple Support](https://support.apple.com/guide/iphone/open-as-web-app-iphea86e5236/ios) · [Chrome Help](https://support.google.com/chrome/answer/9658361?co=GENIE.Platform%3DAndroid)
-
-### 2. Make it an installable progressive web app
-
-- Add `manifest.webmanifest` with an app name, short name, `start_url` and `scope` set to `./`, `display` set to `standalone`, and 192×192 and 512×512 PNG icons. Use relative asset paths so the app works under GitHub Pages' `/Wardrobe/` path.
-- Link the manifest in `index.html`. The current Content Security Policy starts with `default-src 'none'`. Add `manifest-src 'self'` to allow the manifest and add `'self'` to `img-src` alongside `blob:` for same-origin icons.
-- Publish over HTTPS and verify the installed app launches from its icon. If you later add offline support, cache only static app files. Keep wardrobe photos, item names, event text, and results out of persistent storage.
-
-[MDN installability guide](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Guides/Making_PWAs_installable)
-
-### 3. Package for app stores if needed
-
-Use Capacitor to wrap the existing web app. Create a Node project with a `package.json`, put the web files in a separate directory such as `www/`, and set Capacitor's `webDir` to that directory. Add Android, sync the web assets, and build and test in Android Studio on Windows. For a local iOS build, use macOS with Xcode. Store distribution also requires developer accounts, signing, and review.
-
-Test photo selection, external shopping links, and session clearing again in both native builds.
-
-[Capacitor installation](https://capacitorjs.com/docs/getting-started) · [Platform setup](https://capacitorjs.com/docs/getting-started/environment-setup)
-
-## Product milestones
-
-1. Confirm students can add enough clothes and find an outfit they'd actually wear.
-2. Improve recommendations using student feedback and test the experience on phones.
-3. Evaluate AI only if it improves outfit suggestions. Keep photos local and evaluate provider retention and request logging before sending any session details to an external service.
+Older project and mobile guides describe the previous rules-based prototype and should not be used as current setup or privacy instructions.

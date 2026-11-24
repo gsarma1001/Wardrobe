@@ -1,0 +1,24 @@
+* { box-sizing: border-box; }
+body { margin: 0; font: 1rem/1.5 system-ui, sans-serif; color: #1d172b; background: #f5f0ff; }
+main { max-width: 48rem; margin: auto; padding: 1rem; }
+header, section { padding: 1.25rem; border-radius: 1rem; margin-bottom: 1rem; }
+header { background: #23163c; color: white; }
+section { background: white; border: 1px solid #dcd0ee; }
+h1 { font: 700 2.8rem/1 Georgia, serif; margin: 1rem 0; }
+h2 { font-size: 1.3rem; }
+label { display: block; font-weight: 600; margin: .8rem 0; }
+input, textarea, button { font: inherit; }
+input:not([type=checkbox]), textarea { display: block; width: 100%; padding: .6rem; border: 1px solid #8e819f; border-radius: .5rem; }
+input[type=range] { padding: 0; }
+button { cursor: pointer; min-height: 2.75rem; padding: .6rem 1rem; color: white; background: #56369e; border: 1px solid #56369e; border-radius: .5rem; }
+button.secondary { background: transparent; color: inherit; border-color: currentColor; }
+button:disabled { opacity: .6; cursor: wait; }
+.check { display: flex; align-items: flex-start; gap: .6rem; }
+.check input { margin-top: .35rem; }
+.items, .offers { padding: 0; list-style: none; }
+.items li, .offers li { padding: .75rem; margin: .6rem 0; background: #f0e8ff; border-radius: .6rem; overflow-wrap: anywhere; }
+.items img { display: block; width: 100%; max-width: 12rem; max-height: 12rem; object-fit: contain; }
+#crop-preview { display: block; max-width: 100%; max-height: 18rem; border: 1px solid #8e819f; }
+.crop-controls { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0 1rem; }
+.score { font-size: 2rem; font-weight: bold; }
+:focus-visible { outline: 3px solid #a270f3; outline-offset: 3px; }

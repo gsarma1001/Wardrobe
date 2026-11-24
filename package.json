@@ -4,13 +4,13 @@
   "description": "Find outfits from your closet for any event",
   "main": "index.js",
   "scripts": {
-    "dev": "echo 'Run: cd www && python -m http.server 8000'",
+    "dev": "node server.js",
     "build": "echo 'Build web files for distribution'",
     "sync": "npx cap sync",
     "open:ios": "npx cap open ios",
     "open:android": "npx cap open android",
     "start": "npx cap run ios",
-    "test": "echo 'No tests yet'"
+    "test": "node --test"
   },
   "keywords": [
     "wardrobe",

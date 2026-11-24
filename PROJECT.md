@@ -1,5 +1,7 @@
 # Closet Plan: Project Vision & Roadmap
 
+> Historical planning document. The current prototype and privacy model are described in [README.md](./README.md); timelines, feature status, and projections below are not current.
+
 **Version:** 1.0  
 **Status:** Phase 1 (MVP) in progress  
 **Target Users:** High school and college students (ages 14-22)  

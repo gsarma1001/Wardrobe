@@ -1,5 +1,7 @@
 # Building Closet Plan as a Mobile App
 
+> Historical guide. This has not been validated for the current server-backed prototype. See [README.md](./README.md) for current setup and mobile limitations.
+
 ## Why Capacitor?
 
 **Capacitor** lets you:

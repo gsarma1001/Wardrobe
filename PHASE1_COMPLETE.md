@@ -1,5 +1,7 @@
 # Closet Plan: Phase 1 MVP - Enhancements Complete ✅
 
+> Historical document for the old prototype. See [README.md](./README.md) for current features and privacy details.
+
 ## What's New
 
 Your Closet Plan app now has **three major privacy-first features** that make the core experience smoother and safer for high school and college students.
